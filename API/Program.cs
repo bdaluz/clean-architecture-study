@@ -14,6 +14,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<FlashcardsDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["Redis:ConnectionString"];
+    options.InstanceName = "FlashcardsInstance:";
+});
+
 // Add services to the container.
 
 builder.Services.AddScoped<IDeckRepository, DeckRepository>();
@@ -44,6 +50,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
+app.UseCors("AllowAngular");
 
 app.UseHttpsRedirection();
 

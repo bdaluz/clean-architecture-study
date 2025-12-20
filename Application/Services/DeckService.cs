@@ -2,21 +2,22 @@
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace Application.Services
 {
     public class DeckService : IDeckService
     {
         private readonly IDeckRepository _repository;
+        private readonly IDistributedCache _cache;
 
-        public DeckService(IDeckRepository repository)
+        private const string CacheKeyDecks = "decks_list";
+
+        public DeckService(IDeckRepository repository, IDistributedCache cache)
         {
             _repository = repository;
+            _cache = cache;
         }
 
         public async Task<DeckDto> CreateDeckAsync(CreateDeckDto dto)
@@ -25,6 +26,8 @@ namespace Application.Services
 
             await _repository.AddAsync(deck);
             await _repository.SaveChangesAsync();
+
+            await _cache.RemoveAsync(CacheKeyDecks);
 
             return new DeckDto
             {
@@ -36,14 +39,28 @@ namespace Application.Services
 
         public async Task<List<DeckDto>> GetAllDecksAsync()
         {
+            var cachedData = await _cache.GetStringAsync(CacheKeyDecks);
+
+            if (!string.IsNullOrEmpty(cachedData))
+            {
+                return JsonSerializer.Deserialize<List<DeckDto>>(cachedData);
+            }
+
             var decks = await _repository.GetAllAsync();
 
-            return decks.Select(d => new DeckDto
+            var deckDtos = decks.Select(d => new DeckDto
             {
                 Id = d.Id,
                 Title = d.Title,
                 Description = d.Description
             }).ToList();
+
+            var options = new DistributedCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
+
+            await _cache.SetStringAsync(CacheKeyDecks, JsonSerializer.Serialize(deckDtos), options);
+
+            return deckDtos;
         }
     }
 }
