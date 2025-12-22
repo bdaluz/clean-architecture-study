@@ -2,7 +2,6 @@
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
-using System.Text.Json;
 
 namespace Application.Services
 {
@@ -38,11 +37,11 @@ namespace Application.Services
 
         public async Task<List<DeckDto>> GetAllDecksAsync()
         {
-            var cachedData = await _cacheService.GetAsync(CacheKeyDecks);
+            var cachedDecks = await _cacheService.GetAsync<List<DeckDto>>(CacheKeyDecks);
 
-            if (!string.IsNullOrEmpty(cachedData))
+            if (cachedDecks != null)
             {
-                return JsonSerializer.Deserialize<List<DeckDto>>(cachedData);
+                return cachedDecks;
             }
 
             var decks = await _repository.GetAllAsync();
@@ -54,7 +53,7 @@ namespace Application.Services
                 Description = d.Description
             }).ToList();
 
-            await _cacheService.SetAsync(CacheKeyDecks, JsonSerializer.Serialize(deckDtos));
+            await _cacheService.SetAsync(CacheKeyDecks, deckDtos);
 
             return deckDtos;
         }

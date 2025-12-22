@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace Infrastructure.Services
 {
@@ -16,14 +17,26 @@ namespace Infrastructure.Services
             };
         }
 
-        public async Task<string> GetAsync(string key)
+        public async Task<T?> GetAsync<T>(string key)
         {
-            return await _cache.GetStringAsync(key);
+            var cachedData = await _cache.GetStringAsync(key);
+            if (string.IsNullOrEmpty(cachedData)) { 
+                return default;
+            }
+
+            return JsonSerializer.Deserialize<T>(cachedData);
         }
 
-        public async Task SetAsync(string key, string value)
+        public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null)
         {
-            await _cache.SetStringAsync(key, value, _options);
+            var options = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10)
+            };
+
+            var jsonData = JsonSerializer.Serialize(value);
+            await _cache.SetStringAsync(key, jsonData, options);
         }
 
         public async Task RemoveAsync(string key) {
