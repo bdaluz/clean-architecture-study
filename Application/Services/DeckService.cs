@@ -2,7 +2,6 @@
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 
 namespace Application.Services
@@ -10,14 +9,14 @@ namespace Application.Services
     public class DeckService : IDeckService
     {
         private readonly IDeckRepository _repository;
-        private readonly IDistributedCache _cache;
+        private readonly ICacheService _cacheService;
 
         private const string CacheKeyDecks = "decks_list";
 
-        public DeckService(IDeckRepository repository, IDistributedCache cache)
+        public DeckService(IDeckRepository repository, ICacheService cacheService)
         {
             _repository = repository;
-            _cache = cache;
+            _cacheService = cacheService;
         }
 
         public async Task<DeckDto> CreateDeckAsync(CreateDeckDto dto)
@@ -27,7 +26,7 @@ namespace Application.Services
             await _repository.AddAsync(deck);
             await _repository.SaveChangesAsync();
 
-            await _cache.RemoveAsync(CacheKeyDecks);
+            await _cacheService.RemoveAsync(CacheKeyDecks);
 
             return new DeckDto
             {
@@ -39,7 +38,7 @@ namespace Application.Services
 
         public async Task<List<DeckDto>> GetAllDecksAsync()
         {
-            var cachedData = await _cache.GetStringAsync(CacheKeyDecks);
+            var cachedData = await _cacheService.GetAsync(CacheKeyDecks);
 
             if (!string.IsNullOrEmpty(cachedData))
             {
@@ -55,10 +54,7 @@ namespace Application.Services
                 Description = d.Description
             }).ToList();
 
-            var options = new DistributedCacheEntryOptions()
-                .SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
-
-            await _cache.SetStringAsync(CacheKeyDecks, JsonSerializer.Serialize(deckDtos), options);
+            await _cacheService.SetAsync(CacheKeyDecks, JsonSerializer.Serialize(deckDtos));
 
             return deckDtos;
         }

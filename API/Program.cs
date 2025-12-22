@@ -3,6 +3,7 @@ using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
+using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -14,11 +15,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<FlashcardsDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration["Redis:ConnectionString"];
-    options.InstanceName = "FlashcardsInstance:";
-});
 
 // Add services to the container.
 
@@ -26,6 +22,14 @@ builder.Services.AddScoped<IDeckRepository, DeckRepository>();
 builder.Services.AddScoped<IDeckService, DeckService>();
 builder.Services.AddScoped<ICardRepository, CardRepository>();
 builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddScoped<ICacheService, CacheService>();
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.InstanceName = "FlashcardsInstance:";
+    options.Configuration = builder.Configuration["Redis:ConnectionString"];
+});
+
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
