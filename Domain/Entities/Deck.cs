@@ -37,7 +37,7 @@ namespace Domain.Entities
         private void ValidateAndSetTitle(string title)
         {
             if (string.IsNullOrWhiteSpace(title))
-                throw new ArgumentException("O título do deck não pode ser vazio.");
+                throw new ArgumentException("Deck title can't be empty.");
 
             Title = title;
         }

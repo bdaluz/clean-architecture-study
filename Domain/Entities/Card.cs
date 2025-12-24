@@ -16,8 +16,8 @@ namespace Domain.Entities
 
         public Card(string frontText, string backText, Guid deckId)
         {
-            if (string.IsNullOrWhiteSpace(frontText)) throw new ArgumentException("Frente da carta inválida.");
-            if (string.IsNullOrWhiteSpace(backText)) throw new ArgumentException("Verso da carta inválido.");
+            if (string.IsNullOrWhiteSpace(frontText)) throw new ArgumentException("Invalid card front text.");
+            if (string.IsNullOrWhiteSpace(backText)) throw new ArgumentException("Invalid card back text.");
 
             FrontText = frontText;
             BackText = backText;
