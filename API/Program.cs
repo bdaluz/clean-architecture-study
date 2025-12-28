@@ -26,10 +26,12 @@ builder.Services.AddScoped<ICardRepository, CardRepository>();
 builder.Services.AddScoped<ICardService, CardService>();
 builder.Services.AddScoped<ICacheService, CacheService>();
 
+var redisConnection = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.InstanceName = "FlashcardsInstance:";
-    options.Configuration = builder.Configuration["Redis:ConnectionString"];
+    options.Configuration = redisConnection;
 });
 
 
@@ -52,7 +54,8 @@ builder.Services.AddMassTransit(x =>
 {
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host("localhost", "/", h =>
+        var rabbitHost = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+        cfg.Host(rabbitHost, "/", h =>
         {
             h.Username("guest");
             h.Password("guest");
@@ -64,6 +67,25 @@ builder.Services.AddMassTransit(x =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<FlashcardsDbContext>();
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            context.Database.Migrate();
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Error while applying migrations to database.");
+    }
+}
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

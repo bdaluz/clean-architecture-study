@@ -1,0 +1,54 @@
+services:
+    sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        container_name: flashcards_db
+        environment:
+            - ACCEPT_EULA=Y
+            - MSSQL_SA_PASSWORD=Password123!
+        ports:
+            - "1433:1433"
+        volumes:
+            - sql_data:/var/opt/mssql
+
+    redis:
+        image: redis:8.4
+        container_name: flashcards_redis
+        ports:
+            - "6379:6379"
+
+    rabbitmq:
+        image: rabbitmq:4-management
+        container_name: flashcards_rabbit
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        environment:
+            - RABBITMQ_DEFAULT_USER=guest
+            - RABBITMQ_DEFAULT_PASS=guest
+
+    api:
+        image: flashcards-api
+        container_name: flashcards_api
+        build:
+            context: .
+            dockerfile: API/Dockerfile
+        ports:
+            - "5000:8080"
+            - "5001:8081"
+        depends_on:
+            - sqlserver
+            - redis
+            - rabbitmq
+        restart: on-failure
+
+        environment:
+            # environment variables
+            - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=FlashcardsDb;User Id=sa;Password=Password123!;TrustServerCertificate=True;
+            - Redis__ConnectionString=redis:6379
+            - RabbitMQ__Host=rabbitmq
+
+            - ASPNETCORE_ENVIRONMENT=Development
+            - ASPNETCORE_URLS=http://+:8080
+
+volumes:
+    sql_data:
